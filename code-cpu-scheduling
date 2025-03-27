@@ -1,0 +1,114 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+struct Process {
+    int id, arrival, burst, priority, waiting, turnaround, remaining;
+};
+
+void fcfs(vector<Process> &processes) {
+    int time = 0;
+    cout << "Executing FCFS Scheduling\n";
+    for (auto &p : processes) {
+        if (time < p.arrival) time = p.arrival;
+        p.waiting = time - p.arrival;
+        p.turnaround = p.waiting + p.burst;
+        time += p.burst;
+        cout << "Process " << p.id << " executed. Waiting: " << p.waiting << ", Turnaround: " << p.turnaround << "\n";
+    }
+}
+
+void sjf(vector<Process> &processes) {
+    int time = 0, completed = 0;
+    vector<bool> done(processes.size(), false);
+    cout << "Executing SJF Scheduling\n";
+    while (completed < processes.size()) {
+        int idx = -1, min_burst = 1e9;
+        for (int i = 0; i < processes.size(); i++) {
+            if (!done[i] && processes[i].arrival <= time && processes[i].burst < min_burst) {
+                min_burst = processes[i].burst;
+                idx = i;
+            }
+        }
+        if (idx == -1) time++;
+        else {
+            processes[idx].waiting = time - processes[idx].arrival;
+            time += processes[idx].burst;
+            processes[idx].turnaround = time - processes[idx].arrival;
+            done[idx] = true;
+            completed++;
+            cout << "Process " << processes[idx].id << " executed. Waiting: " << processes[idx].waiting << ", Turnaround: " << processes[idx].turnaround << "\n";
+        }
+    }
+}
+
+void roundRobin(vector<Process> &processes, int quantum) {
+    int time = 0, completed = 0;
+    vector<int> remaining(processes.size());
+    for (int i = 0; i < processes.size(); i++) remaining[i] = processes[i].burst;
+    cout << "Executing Round Robin Scheduling\n";
+    while (completed < processes.size()) {
+        bool progress = false;
+        for (int i = 0; i < processes.size(); i++) {
+            if (remaining[i] > 0 && processes[i].arrival <= time) {
+                progress = true;
+                int execute = min(quantum, remaining[i]);
+                time += execute;
+                remaining[i] -= execute;
+                cout << "Process " << processes[i].id << " executed for " << execute << " units. Remaining: " << remaining[i] << "\n";
+                if (remaining[i] == 0) {
+                    processes[i].turnaround = time - processes[i].arrival;
+                    processes[i].waiting = processes[i].turnaround - processes[i].burst;
+                    completed++;
+                }
+            }
+        }
+        if (!progress) time++;
+    }
+}
+
+void priorityScheduling(vector<Process> &processes) {
+    cout << "Executing Priority Scheduling\n";
+    sort(processes.begin(), processes.end(), [](Process a, Process b) {
+        return a.priority < b.priority;
+    });
+    fcfs(processes);
+}
+
+void printResults(const vector<Process> &processes) {
+    cout << "\nID  Arrival  Burst  Priority  Waiting  Turnaround\n";
+    for (const auto &p : processes) {
+        cout << p.id << "\t" << p.arrival << "\t" << p.burst << "\t" << p.priority << "\t"
+             << p.waiting << "\t" << p.turnaround << "\n";
+    }
+}
+
+int main() {
+    int n, choice, quantum;
+    cout << "Enter number of processes: ";
+    cin >> n;
+    vector<Process> processes(n);
+    
+    cout << "Enter Arrival, Burst Time, and Priority for each process:\n";
+    for (int i = 0; i < n; i++) {
+        processes[i].id = i + 1;
+        cin >> processes[i].arrival >> processes[i].burst >> processes[i].priority;
+        processes[i].remaining = processes[i].burst;
+    }
+    
+    cout << "Choose Scheduling Algorithm:\n1. FCFS\n2. SJF\n3. Round Robin\n4. Priority Scheduling\nChoice: ";
+    cin >> choice;
+    
+    switch (choice) {
+        case 1: fcfs(processes); break;
+        case 2: sjf(processes); break;
+        case 3: cout << "Enter Time Quantum: "; cin >> quantum; roundRobin(processes, quantum); break;
+        case 4: priorityScheduling(processes); break;
+        default: cout << "Invalid choice!"; return 0;
+    }
+    
+    printResults(processes);
+    return 0;
+}
